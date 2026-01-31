@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To Do</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <h1>To Do</h1>
+
+    <div class="input-row">
+      <input type="text" id="todo-input" placeholder="Что нужно сделать?" autofocus>
+      <button id="add-btn">Добавить</button>
+    </div>
+
+    <div class="toolbar">
+      <label class="select-all">
+        <input type="checkbox" id="select-all-cb">
+        <span>Выбрать все</span>
+      </label>
+      <button id="delete-completed-btn">Удалить выполненные</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-filter="all">Все <span id="count-all">0</span></button>
+      <button class="tab" data-filter="active">Активные <span id="count-active">0</span></button>
+      <button class="tab" data-filter="completed">Завершённые <span id="count-completed">0</span></button>
+    </div>
+
+    <ul id="todo-list"></ul>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
