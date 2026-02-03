@@ -15,9 +15,8 @@ db.exec(`
 `);
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Get todos with pagination and filtering
 app.get('/api/todos', (req, res) => {
   const { filter = 'all', page = 1, limit = 5 } = req.query;
   const offset = (page - 1) * limit;
@@ -29,7 +28,6 @@ app.get('/api/todos', (req, res) => {
   const todos = db.prepare(`SELECT * FROM todos ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(limit, offset);
   const total = db.prepare(`SELECT COUNT(*) as count FROM todos ${where}`).get().count;
 
-  // Counts for tabs
   const allCount = db.prepare('SELECT COUNT(*) as count FROM todos').get().count;
   const activeCount = db.prepare('SELECT COUNT(*) as count FROM todos WHERE completed = 0').get().count;
   const completedCount = db.prepare('SELECT COUNT(*) as count FROM todos WHERE completed = 1').get().count;
@@ -37,7 +35,6 @@ app.get('/api/todos', (req, res) => {
   res.json({ todos, total, pages: Math.ceil(total / limit), allCount, activeCount, completedCount });
 });
 
-// Create todo
 app.post('/api/todos', (req, res) => {
     console.log("create")
   const { text } = req.body;
@@ -46,7 +43,6 @@ app.post('/api/todos', (req, res) => {
   res.json(todo);
 });
 
-// Update todo
 app.put('/api/todos/:id', (req, res) => {
   const { text, completed } = req.body;
   if (text !== undefined) db.prepare('UPDATE todos SET text = ? WHERE id = ?').run(text, req.params.id);
@@ -55,13 +51,11 @@ app.put('/api/todos/:id', (req, res) => {
   res.json(todo);
 });
 
-// Delete todo
 app.delete('/api/todos/:id', (req, res) => {
   db.prepare('DELETE FROM todos WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
 
-// Toggle all
 app.put('/api/todos-toggle-all', (req, res) => {
   const { completed } = req.body;
   db.prepare('UPDATE todos SET completed = ?').run(completed ? 1 : 0);
