@@ -1,6 +1,8 @@
 let currentFilter = 'all';
 let currentPage = 1;
 
+const MAX_TEXT_LENGTH = 200;
+
 const todoInput = document.getElementById('todo-input');
 const addBtn = document.getElementById('add-btn');
 const selectAllCb = document.getElementById('select-all-cb');
@@ -8,6 +10,16 @@ const deleteCompletedBtn = document.getElementById('delete-completed-btn');
 const todoList = document.getElementById('todo-list');
 const pagination = document.getElementById('pagination');
 const tabs = document.querySelectorAll('.tab');
+const charCounter = document.getElementById('char-counter');
+const inputError = document.getElementById('input-error');
+
+todoInput.addEventListener('input', () => {
+  const len = todoInput.value.length;
+  charCounter.textContent = `${len} / ${MAX_TEXT_LENGTH}`;
+  charCounter.classList.toggle('limit-near', len >= MAX_TEXT_LENGTH * 0.9);
+  charCounter.classList.toggle('limit-reached', len >= MAX_TEXT_LENGTH);
+  inputError.textContent = '';
+});
 
 async function fetchTodos() {
   const res = await fetch(`/api/todos?filter=${currentFilter}&page=${currentPage}&limit=5`);
@@ -115,12 +127,24 @@ function updateSelectAll(data) {
 async function addTodo() {
   const text = todoInput.value.trim();
   if (!text) return;
-  await fetch('/api/todos', {
+  if (text.length > MAX_TEXT_LENGTH) {
+    inputError.textContent = `Максимум ${MAX_TEXT_LENGTH} символов.`;
+    return;
+  }
+  const res = await fetch('/api/todos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text })
   });
+  if (!res.ok) {
+    const data = await res.json();
+    inputError.textContent = data.error || 'Ошибка при добавлении задачи.';
+    return;
+  }
   todoInput.value = '';
+  charCounter.textContent = `0 / ${MAX_TEXT_LENGTH}`;
+  charCounter.classList.remove('limit-near', 'limit-reached');
+  inputError.textContent = '';
   currentPage = 1;
   await fetchTodos();
 }

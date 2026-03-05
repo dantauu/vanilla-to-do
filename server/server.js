@@ -5,6 +5,38 @@ const path = require('path');
 const app = express();
 const db = new Database('todos.db');
 
+const MAX_TEXT_LENGTH = 200;
+
+// Simple in-memory rate limiter
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 60; // max requests per window per IP
+
+function rateLimit(req, res, next) {
+  const ip = req.ip || req.socket.remoteAddress;
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now - entry.start > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, start: now });
+    return next();
+  }
+
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) {
+    return res.status(429).json({ error: 'Слишком много запросов. Попробуйте позже.' });
+  }
+  next();
+}
+
+// Clean up stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap) {
+    if (now - entry.start > RATE_LIMIT_WINDOW_MS) rateLimitMap.delete(ip);
+  }
+}, 5 * 60 * 1000);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS todos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,6 +47,7 @@ db.exec(`
 `);
 
 app.use(express.json());
+app.use(rateLimit);
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 app.get('/api/todos', (req, res) => {
@@ -36,16 +69,21 @@ app.get('/api/todos', (req, res) => {
 });
 
 app.post('/api/todos', (req, res) => {
-    console.log("create")
   const { text } = req.body;
-  const result = db.prepare('INSERT INTO todos (text) VALUES (?)').run(text);
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Текст задачи не может быть пустым.' });
+  if (text.trim().length > MAX_TEXT_LENGTH) return res.status(400).json({ error: `Текст задачи не может превышать ${MAX_TEXT_LENGTH} символов.` });
+  const result = db.prepare('INSERT INTO todos (text) VALUES (?)').run(text.trim());
   const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(result.lastInsertRowid);
   res.json(todo);
 });
 
 app.put('/api/todos/:id', (req, res) => {
   const { text, completed } = req.body;
-  if (text !== undefined) db.prepare('UPDATE todos SET text = ? WHERE id = ?').run(text, req.params.id);
+  if (text !== undefined) {
+    if (!text.trim()) return res.status(400).json({ error: 'Текст задачи не может быть пустым.' });
+    if (text.trim().length > MAX_TEXT_LENGTH) return res.status(400).json({ error: `Текст задачи не может превышать ${MAX_TEXT_LENGTH} символов.` });
+    db.prepare('UPDATE todos SET text = ? WHERE id = ?').run(text.trim(), req.params.id);
+  }
   if (completed !== undefined) db.prepare('UPDATE todos SET completed = ? WHERE id = ?').run(completed ? 1 : 0, req.params.id);
   const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(req.params.id);
   res.json(todo);

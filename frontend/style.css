@@ -30,7 +30,35 @@ h1 {
 .input-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
+}
+
+.input-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  min-height: 18px;
+}
+
+#char-counter {
+  font-size: 11px;
+  color: #bbb;
+  transition: color .2s;
+}
+
+#char-counter.limit-near {
+  color: #e8a020;
+}
+
+#char-counter.limit-reached {
+  color: #b83f45;
+  font-weight: 600;
+}
+
+.input-error {
+  font-size: 11px;
+  color: #b83f45;
 }
 
 .input-row input {
